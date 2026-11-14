@@ -1,0 +1,8 @@
+{
+  "name": "coach vera — Evaluasi Kesehatan \u0026 Gaya Hidup",
+  "description": "Formulir evaluasi menyeluruh untuk identitas, target kebugaran, pola makan, aktivitas fisik, kualitas tidur, dan refleksi gaya hidup.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
