@@ -1,16 +1,30 @@
 import { useEffect, useState } from 'react';
+import { User } from 'firebase/auth';
 import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  Cloud,
+  LogOut,
   RotateCcw,
   Sparkles,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { GoogleSignInButton } from './components/GoogleSignInButton';
 import { SectionForms } from './components/SectionForms';
 import { SectionSidebar } from './components/SectionSidebar';
 import { SummaryView } from './components/SummaryView';
+import {
+  WorkspaceHubModal,
+  WorkspaceTab,
+} from './components/WorkspaceHubModal';
+import {
+  clearAccessToken,
+  googleSignIn,
+  initAuth,
+  logout,
+} from './services/googleAuth';
 import {
   AssessmentData,
   DEMO_DATA,
@@ -48,6 +62,31 @@ export default function App() {
     null
   );
 
+  // Google Workspace Auth & Modal state (access token kept in memory only)
+  const [googleUser, setGoogleUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [needsAuth, setNeedsAuth] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('forms');
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        setAccessToken(token);
+        setNeedsAuth(false);
+      },
+      (user) => {
+        setGoogleUser(user);
+        setAccessToken(null);
+        setNeedsAuth(true);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -55,6 +94,52 @@ export default function App() {
       // Ignore quota errors
     }
   }, [data]);
+
+  const handleGoogleLogin = async () => {
+    setIsLoggingIn(true);
+    setAuthError(null);
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setGoogleUser(result.user);
+        setAccessToken(result.accessToken);
+        setNeedsAuth(false);
+      }
+    } catch (err) {
+      setAuthError(
+        err instanceof Error
+          ? err.message
+          : 'Gagal masuk dengan Google. Silakan coba lagi.'
+      );
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleGoogleLogout = async () => {
+    await logout();
+    setGoogleUser(null);
+    setAccessToken(null);
+    setNeedsAuth(true);
+  };
+
+  const handleOpenWorkspace = (tab: WorkspaceTab) => {
+    setWorkspaceTab(tab);
+    setWorkspaceOpen(true);
+  };
+
+  const handleLoadAssessment = (
+    loaded: AssessmentData,
+    openSummary = false
+  ) => {
+    setData(loaded);
+    setErrors({});
+    setSectionErrorBanner(null);
+    setIsSubmitted(openSummary);
+    setCurrentSection(1);
+    setWorkspaceOpen(false);
+    scrollToTop();
+  };
 
   const activeSectionMeta = SECTIONS[currentSection - 1];
 
@@ -247,7 +332,40 @@ export default function App() {
             </button>
           </nav>
 
-          <div className="flex items-center shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleOpenWorkspace('forms')}
+              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50/70 px-3.5 py-2 text-[13px] font-semibold text-teal-900 whitespace-nowrap shrink-0 transition-colors hover:bg-teal-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/40"
+            >
+              <Cloud className="h-3.5 w-3.5 text-teal-700" aria-hidden="true" />
+              <span>Google Workspace</span>
+            </button>
+
+            {needsAuth ? (
+              <GoogleSignInButton
+                onClick={handleGoogleLogin}
+                disabled={isLoggingIn}
+                compact
+                label={isLoggingIn ? 'Masuk...' : 'Sign in with Google'}
+              />
+            ) : (
+              <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] text-slate-700">
+                <span className="max-w-[140px] truncate font-medium">
+                  {googleUser?.displayName || googleUser?.email || 'Terhubung'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleGoogleLogout}
+                  aria-label="Keluar dari Google"
+                  title="Keluar dari Google"
+                  className="rounded p-1 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-900"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => setShowResetConfirm(true)}
@@ -258,6 +376,20 @@ export default function App() {
             </button>
           </div>
         </div>
+        {authError && (
+          <div className="mx-auto max-w-6xl px-4 pb-3 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2 text-[13px] text-rose-800">
+              <span>{authError}</span>
+              <button
+                type="button"
+                onClick={() => setAuthError(null)}
+                className="text-[12px] font-semibold underline"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}
@@ -408,6 +540,7 @@ export default function App() {
             data={data}
             onEditSection={(secId) => handleJumpSection(secId)}
             onResetAll={() => setShowResetConfirm(true)}
+            onOpenWorkspace={handleOpenWorkspace}
           />
         )}
       </main>
@@ -463,6 +596,23 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* Google Workspace Hub Modal */}
+      <WorkspaceHubModal
+        isOpen={workspaceOpen}
+        initialTab={workspaceTab}
+        onClose={() => setWorkspaceOpen(false)}
+        user={googleUser}
+        accessToken={accessToken}
+        isLoggingIn={isLoggingIn}
+        onSignIn={handleGoogleLogin}
+        onAuthExpired={() => {
+          clearAccessToken();
+          setAccessToken(null);
+          setNeedsAuth(true);
+        }}
+        data={data}
+        onLoadAssessment={handleLoadAssessment}
+      />
     </div>
   );
 }

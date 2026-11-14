@@ -5,22 +5,28 @@ import {
   Download,
   Edit3,
   FileJson,
+  FileSpreadsheet,
+  HardDrive,
+  Mail,
   Printer,
   RotateCcw,
 } from 'lucide-react';
 import { AssessmentData, SectionId } from '../types/assessment';
 import { calculateBMI, formatSummaryText } from '../utils/validation';
+import { WorkspaceTab } from './WorkspaceHubModal';
 
 interface SummaryViewProps {
   data: AssessmentData;
   onEditSection: (sectionId: SectionId) => void;
   onResetAll: () => void;
+  onOpenWorkspace: (tab: WorkspaceTab) => void;
 }
 
 export const SummaryView: React.FC<SummaryViewProps> = ({
   data,
   onEditSection,
   onResetAll,
+  onOpenWorkspace,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -336,6 +342,50 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
             <span>Isi Formulir Baru</span>
           </button>
+        </div>
+
+        {/* Google Workspace Actions */}
+        <div className="no-print mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[13px] font-bold text-slate-900">
+                Integrasi Google Workspace
+              </p>
+              <p className="mt-0.5 text-[12px] text-slate-600">
+                Simpan data ke Google Drive, kirim ringkasan via Gmail, atau
+                publikasikan pertanyaan ke Google Forms.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenWorkspace('gmail')}
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-800 whitespace-nowrap transition-colors hover:border-teal-300 hover:bg-teal-50/60"
+              >
+                <Mail className="h-4 w-4 text-teal-700" aria-hidden="true" />
+                <span>Kirim via Gmail</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenWorkspace('drive')}
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-800 whitespace-nowrap transition-colors hover:border-teal-300 hover:bg-teal-50/60"
+              >
+                <HardDrive className="h-4 w-4 text-teal-700" aria-hidden="true" />
+                <span>Simpan ke Drive</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenWorkspace('forms')}
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-800 whitespace-nowrap transition-colors hover:border-teal-300 hover:bg-teal-50/60"
+              >
+                <FileSpreadsheet
+                  className="h-4 w-4 text-teal-700"
+                  aria-hidden="true"
+                />
+                <span>Google Forms</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
